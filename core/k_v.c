@@ -6,30 +6,51 @@
 
 #include <math.h>
 
-static unsigned long hash_djb2(const char *str);
+static unsigned long
+hash_djb2(const char *str);
 
-static int next_prime(int n);
+static int
+next_prime(int n);
 
-static int bucket_i(const char *key, HashTable *table);
+static int
+bucket_i(const char *key, HashTable *table);
 
-static Node *getNode(HashTable *table, const char *key);
+static Node
+*getNode(HashTable *table, const char *key);
 
-static void head_push(HashTable *table, unsigned int b_index, Node *node);
+static void
+head_push(HashTable *table, unsigned int b_index, Node *node);
 
-static void rehash(HashTable *table);
+static void
+rehash(HashTable *table);
 
-static void free_node(HashTable *table, Node *node);
+static void
+free_node(HashTable *table, Node *node);
 
-static Node *create_node(char *key, void *data, unsigned long expire);
+static Node
+*create_node(char *key, void *data, unsigned long expire);
 
-static void del_node(HashTable *table, Node *current);
+static void
+del_node(HashTable *table, Node *current);
+
+static unsigned long
+hash_djb2(const char *str) {
+    unsigned long hash = 5381;
+    int c;
+    while ((c = *str++)) {
+        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+    }
+    return hash;
+}
 
 
-int bucket_i(const char *key, HashTable *table) {
+int
+bucket_i(const char *key, HashTable *table) {
     return hash_djb2(key) % table->capacity;
 }
 
-bool is_prime(int n) {
+bool
+is_prime(int n) {
     if (n <= 1) return false;
     if (n <= 3) return true; // 2 和 3 是素数
     if (n % 2 == 0 || n % 3 == 0) return false; // 排除偶数及 3 的倍数
@@ -43,7 +64,8 @@ bool is_prime(int n) {
     return true;
 }
 
-int next_prime(int n) {
+int
+next_prime(int n) {
     if (n <= 2) return 2;
     while (!is_prime(n)) {
         n++;
@@ -51,16 +73,9 @@ int next_prime(int n) {
     return n;
 }
 
-static unsigned long hash_djb2(const char *str) {
-    unsigned long hash = 5381;
-    int c;
-    while ((c = *str++)) {
-        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
-    }
-    return hash;
-}
 
-void free_node(HashTable *table, Node *node) {
+void
+free_node(HashTable *table, Node *node) {
     if (node) {
         free(node->key);
         table->value_free_func(node->value);
@@ -72,28 +87,29 @@ void free_node(HashTable *table, Node *node) {
     }
 }
 
-Node *create_node(char *key, void *data, unsigned long expire) {
+Node
+*create_node(char *key, void *data, unsigned long expire) {
     Node *n_node = malloc(sizeof(Node));
     if (!n_node) {
-        LOG_ERROR("out of memory : %s",stderr(errno));
+        LOG_ERROR("out of memory : %s",strerror(errno));
         EXIT_ERROR();
     }
     n_node->key = key;
     n_node->value = data;
     MateDate *md = malloc(sizeof(MateDate));
     if (!md) {
-        LOG_ERROR("out of memory : %s",stderr(errno));
+        LOG_ERROR("out of memory : %s",strerror(errno));
         EXIT_ERROR();
     }
     struct timeval *tv_create = malloc(sizeof(struct timeval));
     if (!tv_create) {
-        LOG_ERROR("out of memory : %s",stderr(errno));
+        LOG_ERROR("out of memory : %s",strerror(errno));
         EXIT_ERROR();
     }
     gettimeofday(tv_create,NULL);
     struct timeval *tv_expire = malloc(sizeof(struct timeval));
     if (!tv_expire) {
-        LOG_ERROR("out of memory : %s",stderr(errno));
+        LOG_ERROR("out of memory : %s",strerror(errno));
         EXIT_ERROR();
     }
     tv_expire->tv_sec = -1;
@@ -106,7 +122,8 @@ Node *create_node(char *key, void *data, unsigned long expire) {
     return n_node;
 }
 
-void init(HashTable *table, size_t capacity, value_free_func free_func) {
+void
+init(HashTable *table, size_t capacity, value_free_func free_func) {
     if (!table) {
         LOG_ERROR("hash table is null");
         return;
@@ -114,7 +131,7 @@ void init(HashTable *table, size_t capacity, value_free_func free_func) {
     size_t cap = next_prime(capacity);
     Node **tb = calloc(cap, sizeof(Node *));
     if (!tb) {
-        LOG_ERROR("out of memory : %s",stderr(errno));
+        LOG_ERROR("out of memory : %s",strerror(errno));
         EXIT_ERROR();
     }
     table->table = tb;
@@ -124,7 +141,8 @@ void init(HashTable *table, size_t capacity, value_free_func free_func) {
     table->value_free_func = free_func;
 }
 
-Node *getNode(HashTable *table, const char *key) {
+Node
+*getNode(HashTable *table, const char *key) {
     int b_index = bucket_i(key, table);
     Node *bucket = table->table[b_index];
     if (!bucket) {
@@ -159,7 +177,8 @@ Node *getNode(HashTable *table, const char *key) {
 }
 
 
-void head_push(HashTable *table, unsigned int b_index, Node *node) {
+void
+head_push(HashTable *table, unsigned int b_index, Node *node) {
     Node *head = table->table[b_index];
     table->table[b_index] = node;
     node->next = head;
@@ -170,14 +189,15 @@ void head_push(HashTable *table, unsigned int b_index, Node *node) {
 }
 
 
-void rehash(HashTable *table) {
+void
+rehash(HashTable *table) {
     Node **old_tb = table->table;
     unsigned int old_capacity = table->capacity;
     unsigned int new_cap = table->capacity * 2;
 
     Node **new_tb = calloc(new_cap, sizeof(Node *));
     if (!new_tb) {
-        LOG_ERROR("out of memory : %s",stderr(errno));
+        LOG_ERROR("out of memory : %s",strerror(errno));
         EXIT_ERROR();
     }
     table->capacity = new_cap;
@@ -198,7 +218,8 @@ void rehash(HashTable *table) {
     free(old_tb);
 }
 
-void *get(HashTable *table, const char *key) {
+void
+*get(HashTable *table, const char *key) {
     if (!table || !key)
         return NULL;
     Node *exists = getNode(table, key);
@@ -208,7 +229,8 @@ void *get(HashTable *table, const char *key) {
     return exists->value;
 }
 
-void del_node(HashTable *table, Node *current) {
+void
+del_node(HashTable *table, Node *current) {
     Node *prev = current->prev;
     Node *next = current->next;
     if (prev)
@@ -218,7 +240,8 @@ void del_node(HashTable *table, Node *current) {
     free_node(table, current);
 }
 
-void remove_(HashTable *table, const char *key) {
+void
+remove_(HashTable *table, const char *key) {
     if (!table || !key)
         return;
 
@@ -235,7 +258,8 @@ void remove_(HashTable *table, const char *key) {
     del_node(table, exists);
 }
 
-bool put(HashTable *table, const char *key, void *data, unsigned int expire) {
+bool
+put(HashTable *table, const char *key, void *data, unsigned int expire) {
     if (!table || !key || !data)
         return false;
 
@@ -276,14 +300,16 @@ bool put(HashTable *table, const char *key, void *data, unsigned int expire) {
     return true;
 }
 
-void expire(HashTable *table, const char *key, unsigned int expire) {
+void
+expire(HashTable *table, const char *key, unsigned int expire) {
     Node *exists = getNode(table, key);
     if (exists)
         exists->mate_data->expire_time->tv_sec = exists->mate_data->create_time->tv_sec + (expire / 1000);
 }
 
 
-void clear(HashTable *table) {
+void
+clear(HashTable *table) {
     if (!table || !table->table)
         return;
     for (size_t i = 0; i < table->capacity; i++) {

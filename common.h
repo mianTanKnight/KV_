@@ -49,7 +49,7 @@ fprintf(stderr, "[ERROR][%s:%d][%s][%s] " format "\n", \
 __FILE__, __LINE__, __func__, get_current_time(), ##__VA_ARGS__); \
 } while(0)
 
-#define EXIT_SUCCESS()  do { \
+#define EXIT_SUCCESS_()  do { \
     exit(EXIT_SUCCESS) ; \
 } while(0)
 

@@ -4,8 +4,6 @@
 
 #include "command_.h"
 
-static long isNumeric(const char *str);
-
 Command commands[] = {
     {"SET", cmd_set, 2, 3, "SET key value [expire]", "设置键值对"},
     {"GET", cmd_get, 1, 1, "GET key", "获取键对应的值"},
@@ -14,7 +12,12 @@ Command commands[] = {
     {"EXIT", cmd_exit, 1, 1, "EXIT", "退出程序"}
 };
 
-long isNumeric(const char *str) {
+
+static long
+isNumeric(const char *str);
+
+long
+isNumeric(const char *str) {
     if (str == NULL || *str == '\0') {
         return -2;
     }
@@ -30,7 +33,8 @@ long isNumeric(const char *str) {
     return num;
 }
 
-unsigned tokenize_command(char *line, char **argv, int max_args) {
+unsigned
+tokenize_command(char *line, char **argv, int max_args) {
     unsigned size = 0;
     if (!line)
         return size;
@@ -72,6 +76,9 @@ unsigned tokenize_command(char *line, char **argv, int max_args) {
             return i;
         }
         for (int j = 0; j < len; j++) {
+            if (j == len - 1 && '\n' == line[bounds[i][0] + j]) {
+                continue;
+            }
             arg[j] = line[bounds[i][0] + j];
         }
         arg[len] = '\0';
@@ -82,10 +89,11 @@ unsigned tokenize_command(char *line, char **argv, int max_args) {
 }
 
 
-CommandResponse *create_response(void *v, ResponseType type, const char *message) {
+CommandResponse
+*create_response(void *v, ResponseType type, const char *message) {
     CommandResponse *response = malloc(sizeof(CommandResponse));
     if (!response) {
-        LOG_ERROR("out of memory : %s",stderr(errno));
+        LOG_ERROR("out of memory : %s", strerror(errno));
         EXIT_ERROR();
     }
     response->type = type;
@@ -95,70 +103,76 @@ CommandResponse *create_response(void *v, ResponseType type, const char *message
 }
 
 // SET key value [expire]
-CommandResponse *cmd_set(int argc, const char **argv, HashTable *table) {
-    if (argc < 2 || argc > 3)
+CommandResponse
+*cmd_set(int argc, const char **argv, HashTable *table) {
+    if (argc < 3 || argc > 4)
         return create_response(NULL, RESP_INVALID_ARGS, "argc num error");
 
     long expire = 0;
-    if (argc == 3) {
-        long num = isNumeric(argv[2]);
+    if (argc == 4) {
+        long num = isNumeric(argv[3]);
         if (num < 0) {
             return create_response(NULL, RESP_INVALID_ARGS, "expire num error");
         }
         expire = num;
     }
-    if (!put(table, argv[0], (void *) argv[1], expire)) {
+    if (!put(table, argv[1], (void *) argv[2], expire)) {
         return create_response(NULL, RESP_SERVER_ERROR, "server error");
     }
-    return create_response(NULL, RESP_OK, "OK");
+    return create_response("ok", RESP_OK, "OK");
 }
 
 // GET key
-CommandResponse *cmd_get(int argc, const char **argv, HashTable *table) {
-    if (argc != 1)
+CommandResponse
+*cmd_get(int argc, const char **argv, HashTable *table) {
+    if (argc != 2)
         return create_response(NULL, RESP_INVALID_ARGS, "argc num error");
-    return create_response(get(table, argv[0]), RESP_OK, "OK");
+    return create_response(get(table, argv[1]), RESP_OK, "OK");
 }
 
 // DEL key
-CommandResponse *cmd_del(int argc, char **argv, HashTable *table) {
-    if (argc != 1)
+CommandResponse
+*cmd_del(int argc, char **argv, HashTable *table) {
+    if (argc != 2)
         return create_response(NULL, RESP_INVALID_ARGS, "argc num error");
-    remove_(table, argv[0]);
-    return create_response(NULL, RESP_OK, "OK");
+    remove_(table, argv[1]);
+    return create_response("ok", RESP_OK, "OK");
 }
 
 // EXPIRE key
-CommandResponse *cmd_expire(int argc, char **argv, HashTable *table) {
-    if (argc != 2)
+CommandResponse
+*cmd_expire(int argc, char **argv, HashTable *table) {
+    if (argc != 3)
         return create_response(NULL, RESP_INVALID_ARGS, "argc num error");
-    long expire_ = isNumeric(argv[1]);
+    long expire_ = isNumeric(argv[2]);
     if (expire_ < 0) {
         return create_response(NULL, RESP_INVALID_ARGS, "expire num error");
     }
-    expire(table, argv[0], expire_);
-    return create_response(NULL, RESP_OK, "OK");
+    expire(table, argv[1], expire_);
+    return create_response("ok", RESP_OK, "OK");
 }
 
 // EXIT
-CommandResponse *cmd_exit(int argc, char **argv, HashTable *table) {
-    if (argc != 1)
+CommandResponse
+*cmd_exit(int argc, char **argv, HashTable *table) {
+    if (argc != 2)
         return create_response(NULL, RESP_INVALID_ARGS, "argc num error");
     clear(table);
-    return create_response(NULL, RESP_OK, "OK");
+    return create_response("ok", RESP_OK, "OK");
 }
 
 
-Command *match(const char *name) {
+Command
+*match(const char *name) {
     for (int i = 0; i < sizeof(commands) / sizeof(Command); i++) {
-        if (!strcasecmp(name, commands[i].name)) return & commands[i];
-
+        if (!strcasecmp(name, commands[i].name)) return &commands[i];
     }
     return NULL;
 }
 
 
-void free_response(CommandResponse *response) {
+void
+free_response(CommandResponse *response) {
     if (response) {
         // don't free v ,The ownership of V is table
         free(response->msg);
