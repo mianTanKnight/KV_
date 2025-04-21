@@ -13,7 +13,9 @@ add_executable(kv_ main.c
         commands/command_.c
         commands/command_.h
         test/k_v_test.c
-        test/command_test.c)
+        server/server_.c
+        server/server_.h
+        test/server_test.c)
 
 # 链接 uuid 库
 target_link_libraries(kv_ ${UUID_LIBRARIES})
