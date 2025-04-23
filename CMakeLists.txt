@@ -15,7 +15,15 @@ add_executable(kv_ main.c
         test/k_v_test.c
         server/server_.c
         server/server_.h
-        test/server_test.c)
+        test/server_test.c
+        protocol/slenprotocol.c
+        protocol/slenprotocol.c
+        protocol/slenprotocol.h
+        test/protocol_test.c
+        protocol/constant_.c
+        protocol/constant_.h
+        test/protocol_test_2.c
+        test/protocol_test_3.c)
 
 # 链接 uuid 库
 target_link_libraries(kv_ ${UUID_LIBRARIES})

@@ -78,7 +78,7 @@ void
 free_node(HashTable *table, Node *node) {
     if (node) {
         free(node->key);
-        table->value_free_func(node->value);
+        if (table->value_free_func) table->value_free_func(node->value);
         free(node->mate_data->expire_time);
         free(node->mate_data->create_time);
         free(node->mate_data);
@@ -91,25 +91,25 @@ Node
 *create_node(char *key, void *data, unsigned long expire) {
     Node *n_node = malloc(sizeof(Node));
     if (!n_node) {
-        LOG_ERROR("out of memory : %s",strerror(errno));
+        LOG_ERROR("out of memory : %s", strerror(errno));
         EXIT_ERROR();
     }
     n_node->key = key;
     n_node->value = data;
     MateDate *md = malloc(sizeof(MateDate));
     if (!md) {
-        LOG_ERROR("out of memory : %s",strerror(errno));
+        LOG_ERROR("out of memory : %s", strerror(errno));
         EXIT_ERROR();
     }
     struct timeval *tv_create = malloc(sizeof(struct timeval));
     if (!tv_create) {
-        LOG_ERROR("out of memory : %s",strerror(errno));
+        LOG_ERROR("out of memory : %s", strerror(errno));
         EXIT_ERROR();
     }
     gettimeofday(tv_create,NULL);
     struct timeval *tv_expire = malloc(sizeof(struct timeval));
     if (!tv_expire) {
-        LOG_ERROR("out of memory : %s",strerror(errno));
+        LOG_ERROR("out of memory : %s", strerror(errno));
         EXIT_ERROR();
     }
     tv_expire->tv_sec = -1;
@@ -131,7 +131,7 @@ init(HashTable *table, size_t capacity, value_free_func free_func) {
     size_t cap = next_prime(capacity);
     Node **tb = calloc(cap, sizeof(Node *));
     if (!tb) {
-        LOG_ERROR("out of memory : %s",strerror(errno));
+        LOG_ERROR("out of memory : %s", strerror(errno));
         EXIT_ERROR();
     }
     table->table = tb;
@@ -176,6 +176,35 @@ Node
     return NULL;
 }
 
+bool put_pointer(HashTable *table, const char *key, void *data, unsigned int expire) {
+    if (!table || !key || !data)
+        return false;
+
+    Node *exists = getNode(table, key);
+    if (exists) {
+        // 如果键已存在，释放旧值并设置新指针
+        table->value_free_func(exists->value);
+        exists->value = data;
+        return true;
+    }
+
+    if (table->node_size + 1 >= (int) (table->capacity * table->load_factor))
+        rehash(table);
+
+    char *d_key = strdup(key);
+    if (!d_key) {
+        return false; // 内存分配失败
+    }
+
+    int b_index = bucket_i(d_key, table);
+    Node *n_node = create_node(d_key, data, expire);
+    // 使用头推法
+    head_push(table, b_index, n_node);
+    ++table->node_size;
+
+    return true;
+}
+
 
 void
 head_push(HashTable *table, unsigned int b_index, Node *node) {
@@ -197,7 +226,7 @@ rehash(HashTable *table) {
 
     Node **new_tb = calloc(new_cap, sizeof(Node *));
     if (!new_tb) {
-        LOG_ERROR("out of memory : %s",strerror(errno));
+        LOG_ERROR("out of memory : %s", strerror(errno));
         EXIT_ERROR();
     }
     table->capacity = new_cap;
@@ -240,22 +269,29 @@ del_node(HashTable *table, Node *current) {
     free_node(table, current);
 }
 
-void
+void *
 remove_(HashTable *table, const char *key) {
     if (!table || !key)
-        return;
+        return NULL;
 
     Node *exists = getNode(table, key);
     if (!exists) {
-        return;
+        return NULL;
     }
     Node *prev = exists->prev;
     Node *next = exists->next;
     if (!prev) {
         int b_index = bucket_i(key, table);
         table->table[b_index] = next; //prev 如果是NULL 那么就证明是桶头 我们需要更新
+    } else {
+        prev->next = next;  // 更新prev的next指针指向exists的next
     }
-    del_node(table, exists);
+    if (next) {
+        next->prev = prev;  // 如果next存在，更新它的prev指针
+    }
+    void *v = exists->value;
+    free_node(table, exists);
+    return v;
 }
 
 bool

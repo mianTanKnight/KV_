@@ -4,6 +4,7 @@
 
 #include "server_.h"
 #include "../common.h"
+#include "../protocol/slenprotocol.h"
 
 static int
 set_nonblocking(int fd) {
@@ -51,8 +52,10 @@ getEvents(NetServerContext *context, NetEvent **result) {
 
 void
 destroy_event(NetEvent *event) {
-    if (event)
+    if (event) {
         free(event);
+        event = NULL;
+    }
 }
 
 void
@@ -107,7 +110,7 @@ void
 
                     if (t > 0) {
                         NetEvent *event = calloc(1, sizeof(NetEvent) + t * sizeof(char));
-                        event->size = t;
+                        event->size = (int)t;
                         event->fd = current_fd;
                         event->next = NULL;
                         event->type = 1;
@@ -117,6 +120,7 @@ void
                         LOG_INFO("Connection closed by client: fd=%d", current_fd);
                         epoll_ctl(net_context->epoll_fd, EPOLL_CTL_DEL, current_fd,NULL);
                         close(current_fd);
+                        close_fd(current_fd); //通知包管理器 此fd已经close
                     } else {
                         // 读取错误
                         if (errno == EAGAIN || errno == EWOULDBLOCK) {

@@ -135,7 +135,8 @@ CommandResponse
 *cmd_del(int argc, char **argv, HashTable *table) {
     if (argc != 2)
         return create_response(NULL, RESP_INVALID_ARGS, "argc num error");
-    remove_(table, argv[1]);
+    void *remove = remove_(table, argv[1]);
+    if (table->value_free_func) table->value_free_func(remove);
     return create_response("ok", RESP_OK, "OK");
 }
 

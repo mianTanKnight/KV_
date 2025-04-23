@@ -31,7 +31,7 @@ typedef struct net_event {
     NetEvent *next;
     int type; // 连接,读,写(通常不会涉及到写)
     int fd;
-    size_t size;
+    int size;
     char data[]; //柔性数组
 } NetEvent;
 
