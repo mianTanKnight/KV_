@@ -17,8 +17,6 @@
 
 typedef struct fd_info {
     int fd;
-    // -1 -> close, 0 -> listening 只有2个状态
-    volatile int status; // status 只会被epoll 修改
     struct fd_info *next;
     struct fd_info *prev;
 } FdInfo;
@@ -31,6 +29,12 @@ typedef struct fd_buffer {
     size_t event_list_size;
     size_t offset;
     size_t len;
+
+    // cache -> 一种缓存机制 当前的消费信息 被解析出来之后会被缓存下来 len:
+    int ccl; // current_consumer_len  init -> 0
+    int cccsl; // current_consumer_constant_str_len init -> 0
+    int ccsl; // current_consumer_str_len  init -> 0
+
     FdInfo *info;
 } FdBuffer;
 

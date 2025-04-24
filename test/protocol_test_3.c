@@ -17,12 +17,12 @@ double get_time_ms() {
 }
 
 NetEvent *create_test_event(int fd, const char *data, size_t size) {
-    NetEvent *event = calloc(1, sizeof(NetEvent) + size * sizeof(char));
-    event->fd = fd;
-    memcpy(event->data, data, size);
-    event->size = size;
-    event->next = NULL;
-    return event;
+     NetEvent *event = calloc(1, sizeof(NetEvent) + size * sizeof(char));
+     event->fd = fd;
+     memcpy(event->data, data, size);
+     event->size = size;
+     event->next = NULL;
+     return event;
 }
 
 
@@ -295,7 +295,7 @@ void benchmark_large_message(int size, int iterations) {
     destroy_manager();
 }
 
-
+//
 // // 主函数
 // int main(int argc, char *argv[]) {
 //
@@ -308,7 +308,7 @@ void benchmark_large_message(int size, int iterations) {
 //     //
 //     // // 测试分段消息
 //     benchmark_fragmented_messages(1024 * 10, 5, 100); // 10KB消息，分5段，100次迭代
-//     //
+//
 //     printf("Starting performance benchmarks\n\n");
 //     test_memory_leaks();
 //

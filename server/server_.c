@@ -110,7 +110,7 @@ void
 
                     if (t > 0) {
                         NetEvent *event = calloc(1, sizeof(NetEvent) + t * sizeof(char));
-                        event->size = (int)t;
+                        event->size = (int) t;
                         event->fd = current_fd;
                         event->next = NULL;
                         event->type = 1;
@@ -119,8 +119,13 @@ void
                     } else if (t == 0) {
                         LOG_INFO("Connection closed by client: fd=%d", current_fd);
                         epoll_ctl(net_context->epoll_fd, EPOLL_CTL_DEL, current_fd,NULL);
+                        NetEvent *event = calloc(1, sizeof(NetEvent));
+                        event->size = (int) t;
+                        event->fd = current_fd;
+                        event->next = NULL;
+                        event->type = 2;
+                        enqueue(net_context, event);
                         close(current_fd);
-                        close_fd(current_fd); //通知包管理器 此fd已经close
                     } else {
                         // 读取错误
                         if (errno == EAGAIN || errno == EWOULDBLOCK) {

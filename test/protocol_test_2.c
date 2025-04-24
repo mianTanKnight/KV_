@@ -33,7 +33,7 @@
 //     assert(result != NULL);
 //     assert(strncmp(result, "hello", 5) == 0);
 //
-//     // printf("Basic test passed! Parsed: '%s' (length: %zu)\n", result, len);
+//     printf("Basic test passed! Parsed: '%s' (length: %zu)\n", result, len);
 //     free(result);
 //
 //     destroy_manager();
@@ -69,7 +69,7 @@
 //     assert(result != NULL);
 //     assert(strncmp(result, "hello world", 10) == 0);
 //
-//     // printf("Fragmented test passed! Parsed: '%s' (length: %zu)\n", result, len);
+//     printf("Fragmented test passed! Parsed: '%s' (length: %zu)\n", result, len);
 //     free(result);
 //
 //     destroy_manager();
@@ -93,7 +93,7 @@
 //     assert(result1 != NULL);
 //     assert(strncmp(result1, "hello", 5) == 0);
 //
-//     // printf("First message parsed: '%s' (length: %zu)\n", result1, len1);
+//     printf("First message parsed: '%s' (length: %zu)\n", result1, len1);
 //     free(result1);
 //
 //     // 解析第二条消息
@@ -103,7 +103,7 @@
 //     assert(result2 != NULL);
 //     assert(strncmp(result2, "world!!", 7) == 0);
 //
-//     // printf("Second message parsed: '%s' (length: %zu)\n", result2, len2);
+//     printf("Second message parsed: '%s' (length: %zu)\n", result2, len2);
 //     free(result2);
 //
 //     destroy_manager();
@@ -199,7 +199,7 @@
 //
 //     // 检查是否正确解析
 //     if (len > 0 && result != NULL) {
-//         // printf("Colon at boundary test: Parsed '%s' (length: %zu)\n", result, len);
+//         printf("Colon at boundary test: Parsed '%s' (length: %zu)\n", result, len);
 //         free(result);
 //     } else {
 //         printf("Colon at boundary test: Failed to parse message\n");
@@ -270,7 +270,8 @@
 //             printf("After fragment %d: Successfully parsed '%s'\n", i + 1, result);
 //             free(result);
 //             break;
-//         } else if (i == num_fragments - 1) {
+//         }
+//         if (i == num_fragments - 1) {
 //             printf("Failed to parse message even after all fragments\n");
 //         }
 //     }

@@ -76,9 +76,6 @@ tokenize_command(char *line, char **argv, int max_args) {
             return i;
         }
         for (int j = 0; j < len; j++) {
-            if (j == len - 1 && '\n' == line[bounds[i][0] + j]) {
-                continue;
-            }
             arg[j] = line[bounds[i][0] + j];
         }
         arg[len] = '\0';
@@ -119,7 +116,7 @@ CommandResponse
     if (!put(table, argv[1], (void *) argv[2], expire)) {
         return create_response(NULL, RESP_SERVER_ERROR, "server error");
     }
-    return create_response("ok", RESP_OK, "OK");
+    return create_response("ok", RESP_OK, "OK\n");
 }
 
 // GET key
@@ -127,7 +124,7 @@ CommandResponse
 *cmd_get(int argc, const char **argv, HashTable *table) {
     if (argc != 2)
         return create_response(NULL, RESP_INVALID_ARGS, "argc num error");
-    return create_response(get(table, argv[1]), RESP_OK, "OK");
+    return create_response(get(table, argv[1]), RESP_OK, "OK\n");
 }
 
 // DEL key
@@ -135,9 +132,8 @@ CommandResponse
 *cmd_del(int argc, char **argv, HashTable *table) {
     if (argc != 2)
         return create_response(NULL, RESP_INVALID_ARGS, "argc num error");
-    void *remove = remove_(table, argv[1]);
-    if (table->value_free_func) table->value_free_func(remove);
-    return create_response("ok", RESP_OK, "OK");
+    remove_(table, argv[1]);
+    return create_response("ok", RESP_OK, "OK\n");
 }
 
 // EXPIRE key
@@ -150,7 +146,7 @@ CommandResponse
         return create_response(NULL, RESP_INVALID_ARGS, "expire num error");
     }
     expire(table, argv[1], expire_);
-    return create_response("ok", RESP_OK, "OK");
+    return create_response("ok", RESP_OK, "OK\n");
 }
 
 // EXIT
@@ -159,12 +155,13 @@ CommandResponse
     if (argc != 2)
         return create_response(NULL, RESP_INVALID_ARGS, "argc num error");
     clear(table);
-    return create_response("ok", RESP_OK, "OK");
+    return create_response("ok", RESP_OK, "OK\n");
 }
 
 
 Command
 *match(const char *name) {
+    if (!name) return NULL;
     for (int i = 0; i < sizeof(commands) / sizeof(Command); i++) {
         if (!strcasecmp(name, commands[i].name)) return &commands[i];
     }
