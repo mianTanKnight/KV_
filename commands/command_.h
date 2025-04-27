@@ -21,6 +21,8 @@ typedef struct CommandResponse {
     ResponseType type;
     void *data;
     char *msg;
+    int fd;
+    struct CommandResponse *next;
 } CommandResponse;
 
 typedef CommandResponse * (*CommandHandler)(int argc, char **argv, HashTable *table);
@@ -51,8 +53,7 @@ void free_response(CommandResponse *response);
 
 extern Command commands[];
 
-Command* match(const char *name);
-
+Command *match(const char *name);
 
 
 #endif //COMMAND__H

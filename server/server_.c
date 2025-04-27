@@ -32,16 +32,19 @@ enqueue(NetServerContext *context, NetEvent *event) {
         context->tail->next = event;
         context->tail = event;
     }
+    event->next = NULL;
     context->event_count++;
-    pthread_cond_signal(&context->queue_cond); // 唤醒可能的被阻塞的线程
+    pthread_cond_signal(&context->queue_cond);
     pthread_mutex_unlock(&context->queue_mutex);
 }
 
 size_t
 getEvents(NetServerContext *context, NetEvent **result) {
-    if (context->event_count == 0) // event_count 是由 volatile修饰的 支持无锁 快速检测是否是empty queue
-        return 0;
     pthread_mutex_lock(&context->queue_mutex);
+    // 使用while循环防止虚假唤醒
+    while (context->event_count == 0) {
+        pthread_cond_wait(&context->queue_cond, &context->queue_mutex);
+    }
     *result = context->head;
     size_t evens = context->event_count;
     context->head = context->tail = NULL;
@@ -51,10 +54,10 @@ getEvents(NetServerContext *context, NetEvent **result) {
 }
 
 void
-destroy_event(NetEvent *event) {
-    if (event) {
-        free(event);
-        event = NULL;
+destroy_event(NetEvent **event) {
+    if (*event) {
+        free(*event);
+        *event = NULL;
     }
 }
 
@@ -103,29 +106,30 @@ void
                 if (add_to_epoll(net_context->epoll_fd, connect_fd, EPOLLIN) < 0) {
                     LOG_ERROR("Add to epoll failure %s", inet_ntoa(client_.sin_addr));
                     close(connect_fd);
+                } else {
+                    if (binding_(connect_fd) < 0)
+                        close(connect_fd);
                 }
             } else {
                 if (events[i].events & EPOLLIN) {
                     ssize_t t = read(current_fd, buffer, 4096);
-
                     if (t > 0) {
                         NetEvent *event = calloc(1, sizeof(NetEvent) + t * sizeof(char));
+                        // event->size = (int) t - 1;
                         event->size = (int) t;
                         event->fd = current_fd;
-                        event->next = NULL;
                         event->type = 1;
+                        event->next = NULL;
                         memcpy(event->data, buffer, t);
                         enqueue(net_context, event);
                     } else if (t == 0) {
-                        LOG_INFO("Connection closed by client: fd=%d", current_fd);
                         epoll_ctl(net_context->epoll_fd, EPOLL_CTL_DEL, current_fd,NULL);
+                        close(current_fd);
+                        LOG_INFO("Connection closed by client: fd=%d", current_fd);
                         NetEvent *event = calloc(1, sizeof(NetEvent));
-                        event->size = (int) t;
                         event->fd = current_fd;
-                        event->next = NULL;
                         event->type = 2;
                         enqueue(net_context, event);
-                        close(current_fd);
                     } else {
                         // 读取错误
                         if (errno == EAGAIN || errno == EWOULDBLOCK) {

@@ -22,15 +22,14 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#define DEFAULT_PORT  9888
 #define MAX_EVENT_COUNT 512
 
 typedef struct net_event NetEvent;
 
 typedef struct net_event {
-    NetEvent *next;
     int type; // 连接,读,写(通常不会涉及到写)
     int fd;
+    NetEvent *next;
     int size;
     char data[]; //柔性数组
 } NetEvent;
@@ -62,7 +61,8 @@ NetServerContext *create_net_server_context(const size_t port, size_t backlog, s
 
 size_t getEvents(NetServerContext *context, NetEvent **result);
 
-void destroy_event(NetEvent *event);
+void
+destroy_event(NetEvent **event);
 
 void destroy_net_server_context(NetServerContext *context);
 

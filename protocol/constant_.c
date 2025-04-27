@@ -6,6 +6,7 @@
 char *constants_ = NULL;
 size_t constants_length_ = 0;
 
+
 int
 init_constants(size_t cap_size) {
     if (cap_size == 0 || cap_size > MAX_STR_NUM_CONSTANT_LEN) {
@@ -44,7 +45,7 @@ char
 }
 
 void
-destroy_constants() {
+destroy_str_constants() {
     free(constants_);
     constants_ = NULL;
 }

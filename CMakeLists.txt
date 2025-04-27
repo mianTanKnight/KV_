@@ -23,7 +23,11 @@ add_executable(kv_ main.c
         protocol/constant_.c
         protocol/constant_.h
         test/protocol_test_2.c
-        test/protocol_test_3.c)
+        test/protocol_test_3.c
+        protocol/buffers_.c
+        protocol/buffers_.h
+        reply_/reply_.c
+        reply_/reply_.h)
 
 # 链接 uuid 库
 target_link_libraries(kv_ ${UUID_LIBRARIES})

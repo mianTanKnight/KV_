@@ -3,6 +3,8 @@
 #include "server/server_.h"
 #include "protocol/slenprotocol.h"
 #include "commands/command_.h"
+#include "protocol/buffers_.h"
+#include "reply_/reply_.h"
 
 // Net-Server
 NetServerContext *net_server_context = NULL;
@@ -11,7 +13,17 @@ HashTable *k_v_table = &hash_table;
 
 volatile int running = 1;
 
+
+void clear__() {
+    clear(k_v_table);
+    stop_reply();
+    destroy_net_server_context(net_server_context);
+    free(net_server_context);
+    free(k_v_table);
+}
+
 void handle_signal(int sig) {
+    clear__();
     printf("Received signal %d, shutting down...\n", sig);
     running = 0;
 }
@@ -23,72 +35,87 @@ void handle_signal(int sig) {
 void parser_start_args(int argc, char **argv, int *port, int *backlog, int *max_connections) {
 }
 
+
+void dis_all_event(NetEvent *head) {
+    while (head) {
+        NetEvent *next = head->next;
+        destroy_event(&head);
+        head = next;
+    }
+}
+
 int process_events(NetServerContext *context) {
     if (context->status < 0) {
+        fprintf(stderr, "Net context status -1 \n");
         return -1;
     }
-    NetEvent *events = NULL;
-    size_t count = getEvents(context, &events);
+    NetEvent *current = NULL;
+    getEvents(context, &current);
     char *argv[10] = {NULL};
 
-    if (count > 0) {
-        NetEvent *current = events;
-        while (current) {
-            NetEvent *next = current->next;
-            if (current->type == 2) {
-                //fd close event
-                destroy_fd(current->fd);
-                destroy_event(current);
-                goto next;
-            }
-            if (neatenbags(current) < 0) {
-                fprintf(stderr, "Error while processing events %s\n ", strerror(errno));
-                continue;
-            }
-            //优先处理当下current 最有可能就绪
-            char *data = NULL;
-            int size = paserfdbags(current->fd, &data);
-            if (size == -1) {
-                fprintf(stderr, "Error paserfdbags processing events %s\n ", strerror(errno));
-                goto next;
-            }
-            if (size <= 0) {
-                if (data) free(data);
-                goto next;
-            }
-            unsigned argc = tokenize_command(data, argv, 10);
-            Command *command = match(argv[0]);
+    CommandResponse *head = NULL;
+    CommandResponse *tail = NULL;
+    int count = 0;
 
-            if (!command) {
-                fprintf(stderr, "The command is illegal. %s\n ", argv[0]);
-                continue;
+    while (current) {
+        NetEvent *next = current->next;
+
+        if (current->type == 2) {
+            // fd close 事件
+            FdBuffer *fdnetbuffer = discharge(current->fd);
+            if (fdnetbuffer) {
+                dis_all_event(fdnetbuffer->head);
+                free(fdnetbuffer);
             }
-            CommandResponse *command_response = command->handler(argc, argv, k_v_table);
-            if (strcmp("OK\n", command_response->msg) == 0) {
-                // 暂时的实现
-                write(current->fd, command_response->data == NULL ? "empty" : command_response->data,
-                      command_response->data == NULL ? 6 : strlen(command_response->data));
-            } else {
-                write(current->fd, command_response->msg, strlen(command_response->msg));
-            }
-            free_response(command_response);
-            for (int i = 0; i < argc; i++) {
-                free(argv[i]);
-            }
-            memset(argv, 0, sizeof(char) * 10);
-        next:
+            destroy_event(&current);
             current = next;
+        } else {
+            // fd read 事件
+            FdBuffer *bags = get_(current->fd);
+            if (bags) {
+                if (neatenbags(current, bags) < 0) {
+                    fprintf(stderr, "Error while processing events %s\n ", strerror(errno));
+                    goto next_;
+                }
+                char *data = NULL;
+                int size = paserfdbags(bags, &data);
+                if (size <= 0) {
+                    fprintf(stderr, "Error while processing events %s\n ", strerror(errno));
+                    free(data);
+                    goto next_;
+                }
+                //解析 命令
+                unsigned argc = tokenize_command(data, argv, 10);
+                Command *command = match(argv[0]);
+                if (!command) {
+                    fprintf(stderr, "Error while processing events of parser command  %s\n ", strerror(errno));
+                    free(data);
+                    goto next_;
+                }
+                CommandResponse *command_response = command->handler(argc, argv, k_v_table);
+                command_response->fd = current->fd;
+                if (tail) {
+                    tail->next = command_response;
+                    tail = command_response;
+                } else {
+                    head = tail = command_response;
+                }
+                count++;
+                command_response->next = NULL;
+                for (int i = 0; i < 10; ++i) {
+                    if (argv[i]) {
+                        free(argv[i]);
+                        argv[i] = NULL;
+                    }
+                }
+            next_:
+                current = next;
+            }
         }
-    } else {
-        pthread_mutex_lock(&context->queue_mutex);
-        pthread_cond_wait(&context->queue_cond, &context->queue_mutex);
-        pthread_mutex_unlock(&context->queue_mutex);
     }
-    return 0;
+    return r_enqueue_(head, tail, count);
 }
 
-void eixt_(void) {
-}
 
 /**
  *
@@ -105,20 +132,25 @@ int main(int argc, char *argv[]) {
     signal(SIGTERM, handle_signal);
 
     net_server_context = create_net_server_context(port, backlog, max_connections);
-    init_net_bags_manager(backlog);
     if (!net_server_context) {
         fprintf(stderr, "Failed to create server context\n");
-        return 1;
+        exit(EXIT_FAILURE);
+    }
+    if (init_fd_buffers() < 0) {
+        fprintf(stderr, "Failed to create buffers \n");
+        exit(EXIT_FAILURE);
     }
     init(&hash_table, 5, free);
     fprintf(stdout, "Server started port: %d\n", port);
 
+    create_reply();
+
     while (running) {
-        if (process_events(net_server_context)) {
+        if (process_events(net_server_context) < 0) {
             fprintf(stderr, "Failed to process events %s \n", strerror(errno));
             fprintf(stderr, "Exiting...\n");
             break;
         }
     }
-    eixt_();
+    clear__();
 }

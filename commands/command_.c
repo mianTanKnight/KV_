@@ -159,13 +159,29 @@ CommandResponse
 }
 
 
-Command
-*match(const char *name) {
-    if (!name) return NULL;
-    for (int i = 0; i < sizeof(commands) / sizeof(Command); i++) {
-        if (!strcasecmp(name, commands[i].name)) return &commands[i];
+Command *match(const char *name) {
+    switch (name[0]) {
+        case 'S':
+        case 's':
+            return &commands[0]; // SET
+
+        case 'G':
+        case 'g':
+            return &commands[1]; // GET
+
+        case 'D':
+        case 'd':
+            return &commands[2]; // DEL
+
+        case 'E':
+        case 'e': {
+            if (name[1] == 'X' || name[1] == 'x')
+                return &commands[4]; // EXIT
+            return &commands[3]; // EXPIRE
+        }
+        default:
+            return NULL;
     }
-    return NULL;
 }
 
 
