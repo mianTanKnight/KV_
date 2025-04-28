@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <limits.h>
+#include "../protocol/slenprotocol.h"
 
 typedef enum {
     RESP_OK,
@@ -36,6 +37,9 @@ typedef struct Command {
 } Command;
 
 unsigned tokenize_command(char *line, char **argv, int max_args);
+
+unsigned tokenize_command_zero_copy_(NetEvent *event, size_t event_offset, size_t len, size_t len_str_l,
+                                     char **argv, int max_args, char **buffer_out);
 
 CommandResponse *create_response(void *v, ResponseType type, const char *message);
 

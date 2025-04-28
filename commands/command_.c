@@ -4,6 +4,7 @@
 
 #include "command_.h"
 
+#include <ctype.h>
 Command commands[] = {
     {"SET", cmd_set, 2, 3, "SET key value [expire]", "设置键值对"},
     {"GET", cmd_get, 1, 1, "GET key", "获取键对应的值"},
@@ -32,6 +33,89 @@ isNumeric(const char *str) {
     }
     return num;
 }
+
+unsigned tokenize_command_zero_copy_(NetEvent *event, size_t event_offset, size_t len, size_t len_str_l,
+                                     char **argv, int max_args, char **buffer_out) {
+    if (!event || !argv || max_args <= 0 || !buffer_out)
+        return 0;
+
+    // 分配单个缓冲区
+    char *buffer = malloc(len + 1);
+    if (!buffer) return 0;
+    memset(buffer, 0, len + 1); // 初始化为0
+
+    // 将缓冲区指针返回给调用者
+    *buffer_out = buffer;
+
+    // 跳过长度前缀和分隔符
+    size_t skip = len_str_l + 1;
+    NetEvent *curr_event = event;
+    size_t curr_offset = event_offset;
+    size_t remaining = len;
+    size_t buf_pos = 0;
+    int in_word = 0;
+
+    // 处理完整的消息数据
+    while (remaining > 0) {
+        // 处理事件边界
+        if (curr_offset >= curr_event->size) {
+            curr_event = curr_event->next;
+            if (!curr_event) break;
+            curr_offset = 0;
+            continue; // 不减少remaining，继续处理
+        }
+
+        // 获取当前字符
+        char c = curr_event->data[curr_offset++];
+
+        // 跳过前缀部分
+        if (skip > 0) {
+            skip--;
+            continue; // 继续处理前缀，不减少remaining
+        }
+
+        // 处理字符
+        if (isspace(c)) {
+            if (in_word) {
+                // 词结束，添加终止符
+                buffer[buf_pos++] = '\0';
+                in_word = 0;
+            }
+            // 跳过连续空格
+        } else {
+            // 非空格字符
+            buffer[buf_pos++] = c;
+            in_word = 1;
+        }
+
+        remaining--;
+    }
+
+    // 确保最后一个词有终止符
+    if (in_word) {
+        buffer[buf_pos] = '\0';
+    }
+
+    // 搜索参数并填充argv数组
+    unsigned arg_count = 0;
+    size_t pos = 0;
+
+    // 扫描整个缓冲区，寻找所有参数
+    while (pos < buf_pos && arg_count < max_args) {
+        // 如果找到非空字符，这是一个参数的开始
+        if (buffer[pos] != '\0') {
+            argv[arg_count++] = buffer + pos;
+
+            // 跳到参数结束（下一个'\0'）
+            while (pos < buf_pos && buffer[pos] != '\0') pos++;
+        }
+        pos++;
+    }
+
+    return arg_count;
+}
+
+
 
 unsigned
 tokenize_command(char *line, char **argv, int max_args) {

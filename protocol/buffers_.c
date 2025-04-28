@@ -32,6 +32,8 @@ int binding_(int fd) {
     buffer->head = buffer->tail = NULL;
     buffer->event_list_size = 0;
     buffer->offset = 0;
+    buffer->cursors_event = NULL;
+    buffer->cursors_event_offset = 0;
     buffer->len = 0;
     buffer->ccl = 0;
     buffer->ccsl = 0;
@@ -66,4 +68,3 @@ int init_fd_buffers() {
     maxfdlimit_ = maxfdlimit;
     return (int) maxfdlimit;
 }
-

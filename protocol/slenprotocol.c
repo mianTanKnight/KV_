@@ -2,6 +2,9 @@
 // Created by wenshen on 25-4-21.
 //
 #include "slenprotocol.h"
+
+#include <wctype.h>
+
 #include "constant_.h"
 
 size_t
@@ -61,6 +64,110 @@ neatenbags(NetEvent *curr_event, FdBuffer *buffer) {
     return 0;
 }
 
+
+/**
+ *
+ * 处理具体的拆包和粘包
+ * buffer 中的 events 是 线性的 这由网络的协议保证
+ * len 就是当前 整个线性长度
+ * offset 指消费指针 为什么要写offset
+ * 如果没有 offset 每消费一批(完整的) 都需要删除或清理
+ * 但如果有 offset 就可以跳过已经消费完的(当恰当的时机清理全部 例如close)
+ *
+ * paserfdbags 是通信中极高频 fn
+ * 它的性能决定 吞吐的上下限
+ *
+ * event1 -> event2 -> event3 -> event4.....
+ * 1: 线性
+ * 2: 一次完整的请求可能分散多个event
+ *
+ * zero_copy
+ * 去掉所有的 memcpy
+ * 返回 startEvent, eventOffset, len
+ * 因为 event 是一个链表所以 startEvent是头节点
+ * 而 eventOffset是 从event的有效开始点
+ *
+ */
+NetEvent *
+paserfdbags_zero_copy(FdBuffer *bags, size_t *eventOffset, size_t *len, size_t *len_str_l) {
+    // offset 和 len 都没有0开始的概念 它不是index(C标准 index 从 0 开始) 它是 size
+    if (bags->len == 0 || bags->offset == bags->len) {
+        return NULL;
+    }
+    NetEvent *start_event = bags->cursors_event;
+    if (!start_event) {
+        start_event = bags->head;
+    }
+    size_t event_offset = bags->cursors_event_offset;
+    int len_num = bags->ccl;
+    int len_constant_str_len = bags->cccsl;
+    char *start_data = start_event->data + event_offset;
+
+    if (!len_num) {
+        NetEvent *start_c = start_event;
+        size_t event_len_c = event_offset;
+        char c = 0;
+        while (start_c) {
+            int f_count = start_c->size - event_len_c;
+            for (int i = 0; i < f_count; ++i) {
+                c = start_data[i];
+                if (c >= '0' && c <= '9') {
+                    len_num = len_num * 10 + (c - '0');
+                    len_constant_str_len++;
+                    continue;
+                }
+                if (c != ':') {
+                    fprintf(stderr, "Invalid format!\n");
+                    return NULL; // error
+                }
+                goto next_;
+            }
+            start_c = start_c->next;
+            if (start_c) {
+                start_data = start_c->data;
+                event_len_c = 0;
+            }
+        }
+    next_:
+        bags->ccl = len_num;
+        bags->cccsl = len_constant_str_len;
+    }
+
+    if (len_num && len_num + len_constant_str_len + 1 <= bags->len) {
+        *eventOffset = event_offset;
+        *len = len_num;
+        *len_str_l = len_constant_str_len;
+        NetEvent *r_event = start_event;
+
+        int read_len = len_num + len_constant_str_len + 1;
+
+        size_t remaining = start_event->size - event_offset;
+        if (remaining >= read_len) {
+            bags->cursors_event_offset += read_len;
+        } else {
+            start_event = start_event->next;
+            while (start_event && read_len > remaining + start_event->size) {
+                remaining += start_event->size;
+                start_event = start_event->next;
+                if (!start_event) {
+                    fprintf(stderr, "Error: message length exceeds available data\n");
+                    return NULL;
+                }
+            }
+            bags->cursors_event_offset = read_len - remaining;
+        }
+        bags->cursors_event = start_event;
+        bags->offset += read_len;
+        bags->ccl = 0;
+        bags->ccsl = 0;
+        bags->cccsl = 0;
+        return r_event;
+    }
+
+    return NULL;
+}
+
+
 int
 paserfdbags(FdBuffer *bags, char **rd) {
     // 处理具体的拆包和粘包
@@ -117,7 +224,6 @@ paserfdbags(FdBuffer *bags, char **rd) {
         start = start->next;
         if (start) {
             len_str_l -= f_count;
-            f_count = start->size;
             data_start = start->data;
         }
     }

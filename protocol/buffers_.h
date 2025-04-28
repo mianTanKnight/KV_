@@ -29,16 +29,24 @@ typedef struct fd_buffer {
     size_t offset;
     size_t len;
 
-    // cache -> 一种缓存机制 当前的消费信息 被解析出来之后会被缓存下来 len:
+    // cache -> 一种缓存机制 当前的消费信息 被解析出来之后会被缓存下来
+    // event:
+    NetEvent *cursors_event;
+    size_t cursors_event_offset;
+    // len:
     int ccl; // current_consumer_len  init -> 0
     int cccsl; // current_consumer_constant_str_len init -> 0
     int ccsl; // current_consumer_str_len  init -> 0
+
 } FdBuffer;
 
 
 int init_fd_buffers();
+
 int binding_(int fd);
+
 FdBuffer *get_(int fd);
+
 FdBuffer *discharge(int fd);
 
 #endif //BUFFERS__H

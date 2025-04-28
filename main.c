@@ -13,7 +13,6 @@ HashTable *k_v_table = &hash_table;
 
 volatile int running = 1;
 
-
 void clear__() {
     clear(k_v_table);
     stop_reply();
@@ -77,19 +76,29 @@ int process_events(NetServerContext *context) {
                     fprintf(stderr, "Error while processing events %s\n ", strerror(errno));
                     goto next_;
                 }
-                char *data = NULL;
-                int size = paserfdbags(bags, &data);
-                if (size <= 0) {
-                    fprintf(stderr, "Error while processing events %s\n ", strerror(errno));
-                    free(data);
+
+                size_t eventOffset, len, str_len;
+                NetEvent *event = paserfdbags_zero_copy(bags, &eventOffset, &len, &str_len);
+                if (!event) {
                     goto next_;
                 }
-                //解析 命令
-                unsigned argc = tokenize_command(data, argv, 10);
+
+                char *buffer = NULL;
+                unsigned argc = tokenize_command_zero_copy_(event, eventOffset, len, str_len, argv, 10, &buffer);
+
+                if (!argv[0]) {
+                    fprintf(stderr, "Error while processing events of parser tokenize_command_zero_copy_  %s\n ",
+                            strerror(errno));
+                    free(buffer);
+                    buffer = NULL;
+                    goto next_;
+                }
+
                 Command *command = match(argv[0]);
                 if (!command) {
                     fprintf(stderr, "Error while processing events of parser command  %s\n ", strerror(errno));
-                    free(data);
+                    free(buffer);
+                    buffer = NULL;
                     goto next_;
                 }
                 CommandResponse *command_response = command->handler(argc, argv, k_v_table);
@@ -102,13 +111,8 @@ int process_events(NetServerContext *context) {
                 }
                 count++;
                 command_response->next = NULL;
-                for (int i = 0; i < 10; ++i) {
-                    if (argv[i]) {
-                        free(argv[i]);
-                        argv[i] = NULL;
-                    }
-                }
             next_:
+                if (buffer) free(buffer);
                 current = next;
             }
         }
@@ -117,10 +121,6 @@ int process_events(NetServerContext *context) {
 }
 
 
-/**
- *
- *
- */
 int main(int argc, char *argv[]) {
     int port = DEFAULT_PORT;
     int backlog = DEFAULT_BACKLOG;
