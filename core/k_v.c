@@ -52,10 +52,9 @@ bucket_i(const char *key, HashTable *table) {
 bool
 is_prime(int n) {
     if (n <= 1) return false;
-    if (n <= 3) return true; // 2 和 3 是素数
-    if (n % 2 == 0 || n % 3 == 0) return false; // 排除偶数及 3 的倍数
+    if (n <= 3) return true;
+    if (n % 2 == 0 || n % 3 == 0) return false;
 
-    // 只需检查 6k ± 1 的因子（优化关键）
     for (int i = 5; i * i <= n; i += 6) {
         if (n % i == 0 || n % (i + 2) == 0) {
             return false;
@@ -128,7 +127,7 @@ init(HashTable *table, size_t capacity, value_free_func free_func) {
         LOG_ERROR("hash table is null");
         return;
     }
-    size_t cap = next_prime(capacity);
+    size_t cap = next_prime((int) capacity);
     Node **tb = calloc(cap, sizeof(Node *));
     if (!tb) {
         LOG_ERROR("out of memory : %s", strerror(errno));
@@ -182,7 +181,6 @@ bool put_pointer(HashTable *table, const char *key, void *data, unsigned int exp
 
     Node *exists = getNode(table, key);
     if (exists) {
-        // 如果键已存在，释放旧值并设置新指针
         table->value_free_func(exists->value);
         exists->value = data;
         return true;
@@ -193,7 +191,7 @@ bool put_pointer(HashTable *table, const char *key, void *data, unsigned int exp
 
     char *d_key = strdup(key);
     if (!d_key) {
-        return false; // 内存分配失败
+        return false;
     }
 
     int b_index = bucket_i(d_key, table);
@@ -284,10 +282,10 @@ remove_(HashTable *table, const char *key) {
         int b_index = bucket_i(key, table);
         table->table[b_index] = next; //prev 如果是NULL 那么就证明是桶头 我们需要更新
     } else {
-        prev->next = next;  // 更新prev的next指针指向exists的next
+        prev->next = next; // 更新prev的next指针指向exists的next
     }
     if (next) {
-        next->prev = prev;  // 如果next存在，更新它的prev指针
+        next->prev = prev; // 如果next存在，更新它的prev指针
     }
     void *v = exists->value;
     free_node(table, exists);

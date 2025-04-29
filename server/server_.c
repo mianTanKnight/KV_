@@ -41,7 +41,6 @@ enqueue(NetServerContext *context, NetEvent *event) {
 size_t
 getEvents(NetServerContext *context, NetEvent **result) {
     pthread_mutex_lock(&context->queue_mutex);
-    // 使用while循环防止虚假唤醒
     while (context->event_count == 0) {
         pthread_cond_wait(&context->queue_cond, &context->queue_mutex);
     }
@@ -246,7 +245,6 @@ NetServerContext
 
     init->epoll_fd = epoll_fd;
 
-    // 将监听套接字添加到epoll
     if (add_to_epoll(epoll_fd, socket_fd, EPOLLIN) < 0) {
         LOG_ERROR("Failed to add socket to epoll: %s", strerror(errno));
         close(epoll_fd);

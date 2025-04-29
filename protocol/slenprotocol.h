@@ -27,8 +27,6 @@ size_t slenpro(const char *data, size_t data_len, char **pro_str);
 
 int neatenbags(NetEvent *curr_event, FdBuffer *buffer);
 
-int paserfdbags(FdBuffer *bags, char **rd);
-
 NetEvent *
 paserfdbags_zero_copy(FdBuffer *bags, size_t *eventOffset, size_t *len, size_t *len_str_l);
 

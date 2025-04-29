@@ -29,7 +29,7 @@ void handle_signal(int sig) {
 
 #define DEFAULT_PORT 7000
 #define DEFAULT_BACKLOG 1024
-#define DEFAULT_MAX_CONNECTIONS 10000
+#define DEFAULT_MAX_CONNECTIONS 100000
 
 void parser_start_args(int argc, char **argv, int *port, int *backlog, int *max_connections) {
 }

@@ -64,33 +64,18 @@ neatenbags(NetEvent *curr_event, FdBuffer *buffer) {
     return 0;
 }
 
-
 /**
+ * 基于 len:data 协议
+ * paserfdbags_zero_copy 没有然后的内存申请操作(本地栈除外)
+ * 使用游标支持 cache (buffer 会频繁受检) @see typedef struct fd_buffer
  *
- * 处理具体的拆包和粘包
- * buffer 中的 events 是 线性的 这由网络的协议保证
- * len 就是当前 整个线性长度
- * offset 指消费指针 为什么要写offset
- * 如果没有 offset 每消费一批(完整的) 都需要删除或清理
- * 但如果有 offset 就可以跳过已经消费完的(当恰当的时机清理全部 例如close)
- *
- * paserfdbags 是通信中极高频 fn
- * 它的性能决定 吞吐的上下限
- *
- * event1 -> event2 -> event3 -> event4.....
- * 1: 线性
- * 2: 一次完整的请求可能分散多个event
- *
- * zero_copy
- * 去掉所有的 memcpy
- * 返回 startEvent, eventOffset, len
- * 因为 event 是一个链表所以 startEvent是头节点
- * 而 eventOffset是 从event的有效开始点
+ * step1 : 获取当前有效游标
+ * step2 : 是否分析出len (如果没有实现分析len(copy *) 并同步游标)
+ * step3 : 分析 events
  *
  */
 NetEvent *
 paserfdbags_zero_copy(FdBuffer *bags, size_t *eventOffset, size_t *len, size_t *len_str_l) {
-    // offset 和 len 都没有0开始的概念 它不是index(C标准 index 从 0 开始) 它是 size
     if (bags->len == 0 || bags->offset == bags->len) {
         return NULL;
     }
@@ -159,23 +144,13 @@ paserfdbags_zero_copy(FdBuffer *bags, size_t *eventOffset, size_t *len, size_t *
         bags->cccsl = 0;
         return r_event;
     }
-
     return NULL;
 }
 
-
+// discard
 int
 paserfdbags(FdBuffer *bags, char **rd) {
-    // 处理具体的拆包和粘包
-    // buffer 中的 events 是 线性的 这由网络的协议保证
-    // len 就是当前 整个线性长度
-    // offset 指消费指针 为什么要写offset
-    // 如果没有 offset 每消费一批(完整的) 都需要删除或清理
-    // 但如果有 offset 就可以跳过已经消费完的(当恰当的时机清理全部 例如close)
-
-    // offset 和 len 都没有0开始的概念 它不是index(C标准 index 从 0 开始) 它是 size
     if (bags->len == 0 || bags->offset == bags->len) {
-        //已经消费完了 or 没有新内容
         return 0;
     }
     size_t lt = 0;
@@ -223,7 +198,7 @@ paserfdbags(FdBuffer *bags, char **rd) {
             data_start = start->data;
         }
     }
-    return 0; // no find ':'
+    return 0;
 
 parser:
     if (bags->offset + len_num + 1 > bags->len) {
@@ -239,7 +214,6 @@ parser:
         memcpy(d, start->data + len_str_l + event_offset + 1, len_num);
         *rd = d;
         bags->offset += len_num + len_str_l + 1;
-        //消费成功之后需要重置cache_l
         bags->ccl = 0;
         bags->ccsl = 0;
         bags->cccsl = 0;
@@ -247,7 +221,6 @@ parser:
     }
     size_t d_offset = 0;
     memcpy(d, start->data + event_offset + len_str_l + 1, start->size - event_offset - len_str_l);
-    // Skip char -> :
     d_offset += start->size - event_offset - len_str_l - 1;
     start = start->next;
 
