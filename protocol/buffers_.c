@@ -41,6 +41,12 @@ int binding_(int fd) {
     return 0;
 }
 
+void destroy_buffers() {
+    if (bufffers) {
+        free(bufffers);
+    }
+}
+
 FdBuffer *get_(int fd) {
     return bufffers[fd];
 }

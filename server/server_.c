@@ -41,7 +41,7 @@ enqueue(NetServerContext *context, NetEvent *event) {
 size_t
 getEvents(NetServerContext *context, NetEvent **result) {
     pthread_mutex_lock(&context->queue_mutex);
-    while (context->event_count == 0) {
+    while (context->event_count == 0 && p_running) {
         pthread_cond_wait(&context->queue_cond, &context->queue_mutex);
     }
     *result = context->head;

@@ -46,4 +46,6 @@ FdBuffer *get_(int fd);
 
 FdBuffer *discharge(int fd);
 
+void destroy_buffers();
+
 #endif //BUFFERS__H

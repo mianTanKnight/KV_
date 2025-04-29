@@ -7,15 +7,15 @@
 
 Reply *reply = NULL;
 
-volatile int running_rep_i = 1;
 
-static void reply_data(void *d) {
-    Reply *reply = d;
-    while (running_rep_i) {
+void
+*reply_data(void *arg) {
+    Reply *reply = arg;
+    while (p_running) {
         CommandResponse *head_ = NULL;
         pthread_mutex_lock(&reply->queue_mutex);
         // 使用while循环防止虚假唤醒
-        while (reply->count == 0) {
+        while (reply->count == 0 && p_running) {
             pthread_cond_wait(&reply->queue_cond, &reply->queue_mutex);
         }
         head_ = reply->head;
@@ -37,15 +37,14 @@ static void reply_data(void *d) {
             head_ = next;
         }
     }
+    return NULL;
 }
 
 void stop_reply() {
     if (reply) {
-        running_rep_i = 0;
         pthread_mutex_lock(&reply->queue_mutex);
         pthread_cond_signal(&reply->queue_cond);
         pthread_mutex_unlock(&reply->queue_mutex);
-
         pthread_join(reply->event_thread, NULL);
         CommandResponse *current = reply->head;
         while (current) {

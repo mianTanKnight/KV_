@@ -10,10 +10,12 @@
 #include <unistd.h>
 #include <errno.h>
 #include <time.h>
+#include "signal.h"
 #include <assert.h>
 #include <sys/time.h>
 #include <stdbool.h>
 
+extern volatile sig_atomic_t p_running;
 
 /**********--inline--************/
 

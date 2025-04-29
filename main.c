@@ -6,25 +6,26 @@
 #include "protocol/buffers_.h"
 #include "reply/reply_.h"
 
+volatile sig_atomic_t p_running = 1;
+
 // Net-Server
 NetServerContext *net_server_context = NULL;
 HashTable hash_table;
 HashTable *k_v_table = &hash_table;
 
-volatile int running = 1;
-
 void clear__() {
     clear(k_v_table);
     stop_reply();
     destroy_net_server_context(net_server_context);
-    free(net_server_context);
-    free(k_v_table);
+    destroy_buffers();
 }
 
 void handle_signal(int sig) {
-    clear__();
-    printf("Received signal %d, shutting down...\n", sig);
-    running = 0;
+    p_running = 0;
+    pthread_mutex_lock(&net_server_context->queue_mutex);
+    pthread_cond_signal(&net_server_context->queue_cond);
+    pthread_mutex_unlock(&net_server_context->queue_mutex);
+    LOG_INFO("Received signal Notification Main Exit. \n");
 }
 
 #define DEFAULT_PORT 7000
@@ -33,7 +34,6 @@ void handle_signal(int sig) {
 
 void parser_start_args(int argc, char **argv, int *port, int *backlog, int *max_connections) {
 }
-
 
 void dis_all_event(NetEvent *head) {
     while (head) {
@@ -117,8 +117,19 @@ int main(int argc, char *argv[]) {
 
     parser_start_args(argc, argv, &port, &backlog, &max_connections);
 
-    signal(SIGINT, handle_signal);
-    signal(SIGTERM, handle_signal);
+    struct sigaction sa;
+    sa.sa_handler = handle_signal;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    if (sigaction(SIGINT, &sa, NULL) == -1) {
+        LOG_ERROR("Error setting up SIGINT handler");
+        exit(1);
+    }
+    if (sigaction(SIGTERM, &sa, NULL) == -1) {
+        LOG_ERROR("Error setting up SIGTERM handler");
+        exit(1);
+    }
+    LOG_INFO("Signal handlers installed Pid:%d. Press Ctrl+C -> Exit.\n", getpid());
 
     net_server_context = create_net_server_context(port, backlog, max_connections);
     if (!net_server_context) {
@@ -134,12 +145,14 @@ int main(int argc, char *argv[]) {
 
     create_reply();
 
-    while (running) {
+    while (p_running) {
         if (process_events(net_server_context) < 0) {
             fprintf(stderr, "Failed to process events %s \n", strerror(errno));
             fprintf(stderr, "Exiting...\n");
             break;
         }
     }
+    LOG_INFO("Received signal Start Clear \n");
     clear__();
+    LOG_INFO("Received signal, shutting down...\n");
 }
