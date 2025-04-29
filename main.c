@@ -4,7 +4,7 @@
 #include "protocol/slenprotocol.h"
 #include "commands/command_.h"
 #include "protocol/buffers_.h"
-#include "reply_/reply_.h"
+#include "reply/reply_.h"
 
 // Net-Server
 NetServerContext *net_server_context = NULL;

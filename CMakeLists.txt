@@ -23,8 +23,8 @@ add_executable(kv_ main.c
         protocol/constant_.h
         protocol/buffers_.c
         protocol/buffers_.h
-        reply_/reply_.c
-        reply_/reply_.h
+        reply/reply_.c
+        reply/reply_.h
         test/zero_cpy_test.c)
 
 # 链接 uuid 库
