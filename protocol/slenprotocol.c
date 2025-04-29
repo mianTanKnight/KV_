@@ -149,10 +149,6 @@ paserfdbags_zero_copy(FdBuffer *bags, size_t *eventOffset, size_t *len, size_t *
             while (start_event && read_len > remaining + start_event->size) {
                 remaining += start_event->size;
                 start_event = start_event->next;
-                if (!start_event) {
-                    fprintf(stderr, "Error: message length exceeds available data\n");
-                    return NULL;
-                }
             }
             bags->cursors_event_offset = read_len - remaining;
         }

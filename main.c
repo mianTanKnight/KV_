@@ -58,9 +58,7 @@ int process_events(NetServerContext *context) {
 
     while (current) {
         NetEvent *next = current->next;
-
         if (current->type == 2) {
-            // fd close 事件
             FdBuffer *fdnetbuffer = discharge(current->fd);
             if (fdnetbuffer) {
                 dis_all_event(fdnetbuffer->head);
@@ -69,36 +67,27 @@ int process_events(NetServerContext *context) {
             destroy_event(&current);
             current = next;
         } else {
-            // fd read 事件
             FdBuffer *bags = get_(current->fd);
             if (bags) {
                 if (neatenbags(current, bags) < 0) {
                     fprintf(stderr, "Error while processing events %s\n ", strerror(errno));
                     goto next_;
                 }
-
                 size_t eventOffset, len, str_len;
                 NetEvent *event = paserfdbags_zero_copy(bags, &eventOffset, &len, &str_len);
                 if (!event) {
                     goto next_;
                 }
-
                 char *buffer = NULL;
                 unsigned argc = tokenize_command_zero_copy_(event, eventOffset, len, str_len, argv, 10, &buffer);
-
                 if (!argv[0]) {
                     fprintf(stderr, "Error while processing events of parser tokenize_command_zero_copy_  %s\n ",
                             strerror(errno));
-                    free(buffer);
-                    buffer = NULL;
                     goto next_;
                 }
-
                 Command *command = match(argv[0]);
                 if (!command) {
                     fprintf(stderr, "Error while processing events of parser command  %s\n ", strerror(errno));
-                    free(buffer);
-                    buffer = NULL;
                     goto next_;
                 }
                 CommandResponse *command_response = command->handler(argc, argv, k_v_table);
