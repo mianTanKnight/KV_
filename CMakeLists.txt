@@ -25,7 +25,9 @@ add_executable(kv_ main.c
         protocol/buffers_.h
         reply/reply_.c
         reply/reply_.h
-        test/zero_cpy_test.c)
+        test/zero_cpy_test.c
+        client/kvclient.c
+        client/kvclient.h)
 
 # 链接 uuid 库
 target_link_libraries(kv_ ${UUID_LIBRARIES})

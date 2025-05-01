@@ -25,7 +25,7 @@ void handle_signal(int sig) {
     pthread_mutex_lock(&net_server_context->queue_mutex);
     pthread_cond_signal(&net_server_context->queue_cond);
     pthread_mutex_unlock(&net_server_context->queue_mutex);
-    LOG_INFO("Received signal Notification Main Exit. \n");
+    LOG_INFO("Received signal Notification Main Exit. sig:%d \n", sig);
 }
 
 #define DEFAULT_PORT 7000
@@ -110,7 +110,7 @@ int process_events(NetServerContext *context) {
 }
 
 
-int main(int argc, char *argv[]) {
+int main111(int argc, char *argv[]) {
     int port = DEFAULT_PORT;
     int backlog = DEFAULT_BACKLOG;
     int max_connections = DEFAULT_MAX_CONNECTIONS;
