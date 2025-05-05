@@ -5,9 +5,7 @@
 #ifndef COMMAND__H
 #define COMMAND__H
 #include "../core/k_v.h"
-#include <stdlib.h>
-#include <errno.h>
-#include <limits.h>
+#include "../common.h"
 #include "../protocol/slenprotocol.h"
 
 typedef enum {

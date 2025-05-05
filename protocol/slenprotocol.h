@@ -7,6 +7,10 @@
 #include "../common.h"
 #include "../server/server_.h"
 #include "buffers_.h"
+#include "constant_.h"
+#include "slenprotocol.h"
+
+
 /**
  * 基于长度的简单文本协议
  * <length>:<data>\n

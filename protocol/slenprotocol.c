@@ -3,9 +3,6 @@
 //
 #include "slenprotocol.h"
 
-#include <wctype.h>
-
-#include "constant_.h"
 
 size_t
 slenpro(const char *data, size_t data_len, char **pro_str) {

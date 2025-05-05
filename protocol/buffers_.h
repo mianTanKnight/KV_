@@ -6,7 +6,6 @@
 #define BUFFERS__H
 #include "../common.h"
 #include "../server/server_.h"
-#include <sys/resource.h>
 
 /**
  *  线性数据的组织

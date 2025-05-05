@@ -6,6 +6,10 @@
 #include "protocol/buffers_.h"
 #include "reply/reply_.h"
 
+#define DEFAULT_PORT 7000
+#define DEFAULT_BACKLOG 1024
+#define DEFAULT_MAX_CONNECTIONS 100000
+
 volatile sig_atomic_t p_running = 1;
 
 // Net-Server
@@ -27,10 +31,6 @@ void handle_signal(int sig) {
     pthread_mutex_unlock(&net_server_context->queue_mutex);
     LOG_INFO("Received signal Notification Main Exit. sig:%d \n", sig);
 }
-
-#define DEFAULT_PORT 7000
-#define DEFAULT_BACKLOG 1024
-#define DEFAULT_MAX_CONNECTIONS 100000
 
 void parser_start_args(int argc, char **argv, int *port, int *backlog, int *max_connections) {
 }
@@ -103,6 +103,7 @@ int process_events(NetServerContext *context) {
             next_:
                 if (buffer) free(buffer);
                 current = next;
+
             }
         }
     }

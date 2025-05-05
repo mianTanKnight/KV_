@@ -5,22 +5,8 @@
 
 #ifndef SERVER__H
 #define SERVER__H
-#include <stdbool.h>
-#include <math.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <pthread.h>
-#include <sys/time.h>
-#include <sys/epoll.h>
-#include <signal.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/wait.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <fcntl.h>
+
+#include "../common.h"
 
 #define MAX_EVENT_COUNT 512
 

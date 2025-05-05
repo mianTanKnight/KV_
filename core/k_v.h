@@ -5,7 +5,6 @@
 #ifndef K_V_H
 #define K_V_H
 #include "../common.h"
-#include "sys/time.h"
 
 typedef void (*value_free_func)(void *);
 

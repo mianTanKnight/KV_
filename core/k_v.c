@@ -4,8 +4,6 @@
 
 #include "k_v.h"
 
-#include <math.h>
-
 static unsigned long
 hash_djb2(const char *str);
 

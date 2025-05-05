@@ -7,21 +7,8 @@
 
 #endif //KVCLIENT_H
 #include "../common.h"
-#include <stdbool.h>
-#include <math.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <pthread.h>
-#include <sys/time.h>
-#include <sys/epoll.h>
-#include <signal.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/wait.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
+#include "../protocol/slenprotocol.h"
+
 #include <fcntl.h>
 
 /**
@@ -68,6 +55,7 @@ typedef struct kv_client {
 
     long connect_time;
     char *buffer;
+    size_t offset;
     size_t buffer_size;
 } KVClient;
 
@@ -77,6 +65,6 @@ KVClient *kv_client_create(const char *host, int port, int timeout, int connect_
 void kv_client_destroy(KVClient **client);
 
 
-int set(KVClient *client, const char *key, const char *value);
+// int set(KVClient *client, const char *key, const char *value);
 
-void get(KVClient *client, const char *key, size_t *r_len, char ** r);
+// void get(KVClient *client, const char *key, size_t *r_len, char ** r);

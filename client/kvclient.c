@@ -39,6 +39,7 @@ KVClient *kv_client_create(const char *host, int port, int timeout, int connect_
     client->connect_time = 0;
     client->last_activity = 0;
     client->buffer_size = 4096; // 默认4KB
+    client->offset = 0;
     client->buffer = (char *) malloc(client->buffer_size);
     if (!client->buffer) {
         close(client->connect_fd);
@@ -168,6 +169,7 @@ int kv_client_add_socket_option(KVClient *client, int level, int optname,
 }
 
 
-int set(KVClient *client, const char *key, const char *value) {
-
+int set(KVClient *client, const char *key, const size_t key_len, const char *value, const size_t value_len) {
 }
+
+
