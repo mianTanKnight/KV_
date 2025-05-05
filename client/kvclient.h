@@ -11,6 +11,13 @@
 
 #include <fcntl.h>
 
+
+const char* SET = "set";
+const char* GET = "get";
+const char* DEL = "del";
+const char* EXPIRE = "expire";
+
+
 /**
  *  64------1
  *  bit1: 0长链接模式, 1短链接模式
@@ -64,7 +71,10 @@ KVClient *kv_client_create(const char *host, int port, int timeout, int connect_
 
 void kv_client_destroy(KVClient **client);
 
+int kv_set(KVClient *client, char *key, size_t key_len, char *value, size_t value_len);
 
-// int set(KVClient *client, const char *key, const char *value);
+int kv_get(KVClient *client, char *key, size_t key_len);
 
-// void get(KVClient *client, const char *key, size_t *r_len, char ** r);
+int kv_del(KVClient *client, char *key, size_t key_len);
+
+int kv_expire(KVClient *client, char *key, size_t key_len, char *value, size_t value_len);

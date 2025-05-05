@@ -6,11 +6,11 @@
 
 #include <ctype.h>
 Command commands[] = {
-    {"SET", cmd_set, 2, 3, "SET key value [expire]", "设置键值对"},
-    {"GET", cmd_get, 1, 1, "GET key", "获取键对应的值"},
-    {"DEL", cmd_del, 1, 1, "DEL key", "删除键值对"},
-    {"EXPIRE", cmd_expire, 2, 2, "EXPIRE key expire", "设置键的过期时间"},
-    {"EXIT", cmd_exit, 1, 1, "EXIT", "退出程序"}
+    {"SET", cmd_set, 2, 3, "SET key value [expire]", "设置键值对",3},
+    {"GET", cmd_get, 1, 1, "GET key", "获取键对应的值",3},
+    {"DEL", cmd_del, 1, 1, "DEL key", "删除键值对",3},
+    {"EXPIRE", cmd_expire, 2, 2, "EXPIRE key expire", "设置键的过期时间",6},
+    {"EXIT", cmd_exit, 1, 1, "EXIT", "退出程序",4}
 };
 
 

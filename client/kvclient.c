@@ -6,10 +6,21 @@
 
 #include <sys/resource.h>
 
+#include "../commands/command_.h"
+
 static int
 connect_to_server(KVClient *client);
 
-KVClient *kv_client_create(const char *host, int port, int timeout, int connect_mode) {
+static int
+slenpro_client(KVClient *client,
+               size_t command_i,
+               char **datas,
+               int *data_lens,
+               size_t data_len);
+
+
+KVClient
+*kv_client_create(const char *host, int port, int timeout, int connect_mode) {
     if (!host || port <= 0) {
         errno = EINVAL;
         return NULL;
@@ -56,7 +67,8 @@ KVClient *kv_client_create(const char *host, int port, int timeout, int connect_
 }
 
 
-void kv_client_destroy(KVClient **client) {
+void
+kv_client_destroy(KVClient **client) {
     if (!client)
         return;
     if (!*client)
@@ -82,7 +94,8 @@ void kv_client_destroy(KVClient **client) {
     *client = NULL;
 }
 
-static int connect_to_server(KVClient *client) {
+static
+int connect_to_server(KVClient *client) {
     if (client->connect_fd < 0) {
         return -1;
     }
@@ -123,7 +136,8 @@ static int connect_to_server(KVClient *client) {
     return 0;
 }
 
-int kv_client_add_socket_option(KVClient *client, int level, int optname,
+int
+kv_client_add_socket_option(KVClient *client, int level, int optname,
                                 const void *optval, socklen_t optlen) {
     if (!client || !optval || optlen <= 0) {
         return -1;
@@ -168,8 +182,122 @@ int kv_client_add_socket_option(KVClient *client, int level, int optname,
     return 0;
 }
 
-
-int set(KVClient *client, const char *key, const size_t key_len, const char *value, const size_t value_len) {
+int
+kv_set(KVClient *client, char *key, size_t key_len, char *value, size_t value_len) {
+    char* datas[2];
+    size_t data_lens[2];
+    datas[0] = key;
+    datas[1] = value;
+    data_lens[0] = key_len;
+    data_lens[1] = value_len;
+    return slenpro_client(client,0,datas,data_lens,2);
 }
+
+int
+kv_get(KVClient *client, char *key, size_t key_len) {
+    char* datas[1];
+    size_t data_lens[1];
+    datas[0] = key;
+    data_lens[0] = key_len;
+    return slenpro_client(client,1,datas,data_lens,1);
+}
+
+int
+kv_del(KVClient *client, char *key, size_t key_len) {
+    char* datas[1];
+    size_t data_lens[1];
+    datas[0] = key;
+    data_lens[0] = key_len;
+    return slenpro_client(client,2,datas,data_lens,1);
+}
+
+int
+kv_expire(KVClient *client, char *key, size_t key_len, char *value, size_t value_len) {
+    char* datas[2];
+    size_t data_lens[2];
+    datas[0] = key;
+    datas[1] = value;
+    data_lens[0] = key_len;
+    data_lens[1] = value_len;
+    return slenpro_client(client,3,datas,data_lens,2);
+}
+
+int
+slenpro_client(KVClient *client,
+               size_t command_i,
+               char **datas,
+               int *data_lens,
+               size_t data_len) {
+
+
+    if (!client)
+        return -1;
+
+    Command command = commands[command_i];
+    size_t size = command.name_len;
+    for (int i = 0; i < data_len; i++) {
+        size += data_lens[i];
+        if (i != size - 1) {
+            size++; // add ' '
+        }
+    }
+
+    size_t original_data_len = size;
+    int len_str_len = 1;
+    while (size /= 10)
+        len_str_len++;
+
+    size_t required_size = len_str_len + size + 1;
+    size_t nbuffercap = client->buffer_size;
+
+    while (nbuffercap < required_size)
+        nbuffercap *= 2;
+
+    if (nbuffercap != client->buffer_size) {
+        char *nbuffer = calloc(1, nbuffercap * sizeof(char));
+        if (!nbuffer) {
+            LOG_ERROR("calloc fail %s", strerror(errno));
+            return -1;
+        }
+        free(client->buffer);
+        client->buffer = nbuffer;
+        client->buffer_size = nbuffercap;
+    }
+
+    char *bcopyp = client->buffer + len_str_len + 1;
+    //copy to buffer
+    memcpy(bcopyp, command.name, command.name_len);
+    bcopyp+=command.name_len;
+
+    for (int i = 0; i < size; i++) {
+        memcpy(bcopyp, datas[i], data_lens[i]);
+        bcopyp += data_lens[i];
+        if (i != size - 1) {
+            *bcopyp++ = ' '; // like -> set k1 v1
+        }
+    }
+
+    size_t wlen = slenpro(client->buffer, original_data_len, len_str_len);
+    if (wlen != len_str_len + 1) {
+        LOG_ERROR("slenpro fail %s", strerror(errno));
+        return -1;
+    }
+
+    client->offset = required_size;
+    return (int) required_size;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

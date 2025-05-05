@@ -111,7 +111,7 @@ int process_events(NetServerContext *context) {
 }
 
 
-int main111(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
     int port = DEFAULT_PORT;
     int backlog = DEFAULT_BACKLOG;
     int max_connections = DEFAULT_MAX_CONNECTIONS;

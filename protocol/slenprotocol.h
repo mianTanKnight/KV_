@@ -22,8 +22,7 @@
 /**
  * Client Api
  */
-size_t slenpro(const char *data, size_t data_len, char **pro_str);
-
+size_t slenpro(char* buffer, size_t data_size , size_t data_str_len);
 
 /**
  *  Server Api

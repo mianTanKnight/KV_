@@ -4,38 +4,15 @@
 #include "slenprotocol.h"
 
 
-size_t
-slenpro(const char *data, size_t data_len, char **pro_str) {
-    if (data_len > MAX_DATA_LEN) {
-        LOG_ERROR("too much data!");
-        return -1;
+size_t slenpro(char* buffer, size_t data_len, size_t data_str_len) {
+    size_t t_len = data_str_len;
+    while (data_str_len--) {
+        char n_c = data_len % 10 + '0';
+        data_len /= 10;
+        buffer[data_str_len] = n_c;
     }
-    int written;
-    char *spro;
-    char *num_str = getstrconstant(data_len);
-    if (!num_str) {
-        int prefix_len = snprintf(NULL, 0, "%zu:", data_len);
-        if (prefix_len < 0) {
-            LOG_ERROR("snprintf len failed!");
-            return -1;
-        }
-        spro = calloc(1, prefix_len + data_len + 2);
-        if (!spro) {
-            LOG_ERROR("calloc failed!");
-            return -1;
-        }
-        written = snprintf(spro, prefix_len + data_len + 2, "%zu:%s", data_len, data);
-    } else {
-        spro = calloc(1, CHUNK_SIZE + data_len + 2);
-        written = snprintf(spro, CHUNK_SIZE + data_len + 2, "%s:%s", num_str, data);
-    }
-    if (written < 0) {
-        LOG_ERROR("snprintf failed!");
-        free(spro);
-        return -1;
-    }
-    *pro_str = spro;
-    return written;
+    buffer[t_len] = ':';
+    return t_len + 1;
 }
 
 

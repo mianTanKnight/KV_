@@ -32,6 +32,7 @@ typedef struct Command {
     int min_args, max_args;
     const char *usage;
     const char *description;
+    const size_t name_len;
 } Command;
 
 unsigned tokenize_command(char *line, char **argv, int max_args);
