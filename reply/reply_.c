@@ -28,21 +28,20 @@ void
             CommandResponse *next = head_->next;
             const char *response_data;
             size_t response_length;
-            if (strcmp("OK\n", head_->msg) == 0) {
-                if (head_->data == NULL) {
-                    response_data = "null";
-                    response_length = 4; // "empty"长度
-                } else {
+            if (head_->type == RESP_OK) {
+                if (head_->data) {
                     response_data = head_->data;
                     response_length = strlen(head_->data);
+                } else if (head_->msg[0] == 'O') {
+                    response_data = "2:ok";
+                    response_length = 4;
+                } else {
+                    response_data = "4:null";
+                    response_length = 6;
                 }
             } else {
-                response_data = head_->msg;
-                response_length = strlen(head_->msg);
-            }
-            uint32_t network_length = htonl((uint32_t)response_length);
-            if (write(head_->fd, &network_length, sizeof(network_length)) != sizeof(network_length)) {
-                LOG_ERROR("Failed to write length prefix: %s", strerror(errno));
+                response_data = "5:error";
+                response_length = 8;
             }
             if (write(head_->fd, response_data, response_length) != response_length) {
                 LOG_ERROR("Failed to write response data: %s", strerror(errno));

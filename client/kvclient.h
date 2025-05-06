@@ -55,6 +55,7 @@ typedef struct kv_client {
 
     long connect_time;
     char *buffer;
+    size_t read_offset;
     size_t offset;
     size_t buffer_size;
 } KVClient;

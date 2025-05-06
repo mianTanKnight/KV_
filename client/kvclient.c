@@ -231,6 +231,31 @@ slenpro_client(KVClient *client,
     if (!client)
         return -1;
 
+    char setv_str_[32]; // max of stack
+    int digits = 0;
+    if (command_i == 0) {
+        size_t vlen = data_lens[1];
+        int i = 0;
+        if (vlen == 0) {
+            setv_str_[0] = '0';
+            setv_str_[1] = '\0';
+        } else {
+            size_t temp = vlen;
+            while (temp != 0) {
+                temp /= 10;
+                digits++;
+            }
+            temp = vlen;
+            for (i = digits - 1; i >= 0; i--) {
+                setv_str_[i] = '0' + temp % 10;
+                temp /= 10;
+            }
+            setv_str_[digits++] = ':';
+            setv_str_[digits] = '\0';
+        }
+    }
+
+
     Command command = commands[command_i];
     size_t size = command.name_len + 1; // SET'' 1-> ' '
     for (int i = 0; i < data_len; i++) {
@@ -239,6 +264,8 @@ slenpro_client(KVClient *client,
             size++; // add ' '
         }
     }
+    if (digits > 0)
+        size += digits;
 
     size_t original_data_len = size;
     int len_str_len = 1;
@@ -269,6 +296,10 @@ slenpro_client(KVClient *client,
     memcpy(bcopyp++, " ", 1);
 
     for (int i = 0; i < data_len; i++) {
+        if (digits > 0 && i == 1) {
+            memcpy(bcopyp, setv_str_, digits);
+            bcopyp += digits;
+        }
         memcpy(bcopyp, datas[i], data_lens[i]);
         bcopyp += data_lens[i];
         if (i != original_data_len - 1) {
@@ -300,74 +331,54 @@ int kv_send(KVClient *client) {
     size_t roffset = 0;
     while (remain) {
         size_t writerr = write(client->connect_fd, client->buffer + roffset, remain);
-        if (writerr < 0) {
-            LOG_ERROR("Client write fail %s", strerror(errno));
-            return -1;
-        }
         remain -= writerr;
         roffset += writerr;
     }
 
-    // 重置offset为读取起点
     client->offset = 0;
 
-    // 1. 首先读取4字节的长度前缀
-    uint32_t network_length = 0;
-    size_t prefix_bytes_read = 0;
-    while (prefix_bytes_read < sizeof(network_length)) {
-        ssize_t readt = read(client->connect_fd,
-                         ((char*)&network_length) + prefix_bytes_read,
-                         sizeof(network_length) - prefix_bytes_read);
-
+    size_t prolen = -1;
+    size_t prolen_str_len = 0;
+    while (1) {
+        ssize_t readt = read(client->connect_fd, client->buffer + client->offset, client->buffer_size - client->offset);
+        client->offset += readt;
         if (readt > 0) {
-            prefix_bytes_read += readt;
-        } else if (readt < 0) {
-            LOG_ERROR("Failed to read length prefix: %s", strerror(errno));
+            if (prolen == -1) {
+                prolen = 0;
+                for (size_t i = 0; i < client->buffer_size; i++) {
+                    char c = client->buffer[i];
+                    if (c >= '0' && c <= '9') {
+                        prolen = prolen * 10 + (c - '0');
+                        prolen_str_len++;
+                        continue;
+                    }
+                    if (':' == c) {
+                        break;
+                    }
+                    LOG_ERROR("protocol exception");
+                    return -1;
+                }
+                prolen += prolen_str_len + 1;
+            }
+            if (client->offset == client->buffer_size) {
+                client->buffer_size <<= 1;
+                char *nbuffer = calloc(client->buffer_size, sizeof(char));
+                if (!nbuffer) {
+                    LOG_ERROR("calloc fail %s", strerror(errno));
+                    return -1;
+                }
+                memcpy(nbuffer, client->buffer, client->offset); //copy to new_buffer
+                free(client->buffer);
+                client->buffer = nbuffer;
+            }
+            if (client->offset >= prolen) break;
+        }  else if (readt < 0) {
+            LOG_ERROR("Client read fail %s", strerror(errno));
             return -1;
-        } else { // readt == 0, 连接关闭
-            LOG_ERROR("Connection closed while reading length prefix");
-            return -1;
+        } else {
+            break;
         }
     }
-
-    uint32_t content_length = ntohl(network_length);
-
-    if (content_length > client->buffer_size) {
-        size_t new_size = client->buffer_size;
-        while (new_size < content_length) {
-            new_size <<= 1;  // 倍增直到足够大
-        }
-
-        char *nbuffer = calloc(new_size, sizeof(char));
-        if (!nbuffer) {
-            LOG_ERROR("calloc fail %s", strerror(errno));
-            return -1;
-        }
-
-        // 这里可以跳过复制旧数据，因为我们会完全覆盖它
-        free(client->buffer);
-        client->buffer = nbuffer;
-        client->buffer_size = new_size;
-    }
-
-    size_t content_bytes_read = 0;
-    while (content_bytes_read < content_length) {
-        ssize_t readt = read(client->connect_fd,
-                         client->buffer + content_bytes_read,
-                         content_length - content_bytes_read);
-
-        if (readt > 0) {
-            content_bytes_read += readt;
-        } else if (readt < 0) {
-            LOG_ERROR("Failed to read response content: %s", strerror(errno));
-            return -1;
-        } else { // readt == 0, 连接关闭
-            LOG_ERROR("Connection closed prematurely, expected %u bytes, got %zu",
-                     content_length, content_bytes_read);
-            return -1;
-        }
-    }
-
-    client->offset = content_length;
-    return (int)content_length;
+    client->read_offset = prolen_str_len + 1;
+    return (int) client->offset;
 }

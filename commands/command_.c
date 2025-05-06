@@ -6,11 +6,11 @@
 
 #include <ctype.h>
 Command commands[] = {
-    {"SET", cmd_set, 2, 3, "SET key value [expire]", "设置键值对",3},
-    {"GET", cmd_get, 1, 1, "GET key", "获取键对应的值",3},
-    {"DEL", cmd_del, 1, 1, "DEL key", "删除键值对",3},
-    {"EXPIRE", cmd_expire, 2, 2, "EXPIRE key expire", "设置键的过期时间",6},
-    {"EXIT", cmd_exit, 1, 1, "EXIT", "退出程序",4}
+    {"SET", cmd_set, 2, 3, "SET key value [expire]", "设置键值对", 3},
+    {"GET", cmd_get, 1, 1, "GET key", "获取键对应的值", 3},
+    {"DEL", cmd_del, 1, 1, "DEL key", "删除键值对", 3},
+    {"EXPIRE", cmd_expire, 2, 2, "EXPIRE key expire", "设置键的过期时间", 6},
+    {"EXIT", cmd_exit, 1, 1, "EXIT", "退出程序", 4}
 };
 
 
@@ -200,7 +200,7 @@ CommandResponse
     if (!put(table, argv[1], (void *) argv[2], expire)) {
         return create_response(NULL, RESP_SERVER_ERROR, "server error");
     }
-    return create_response("ok", RESP_OK, "OK\n");
+    return create_response(NULL, RESP_OK, "OK\n");
 }
 
 // GET key
@@ -217,7 +217,7 @@ CommandResponse
     if (argc != 2)
         return create_response(NULL, RESP_INVALID_ARGS, "argc num error");
     remove_(table, argv[1]);
-    return create_response("ok", RESP_OK, "OK\n");
+    return create_response(NULL, RESP_OK, "OK\n");
 }
 
 // EXPIRE key
@@ -230,7 +230,7 @@ CommandResponse
         return create_response(NULL, RESP_INVALID_ARGS, "expire num error");
     }
     expire(table, argv[1], expire_);
-    return create_response("ok", RESP_OK, "OK\n");
+    return create_response(NULL, RESP_OK, "OK\n");
 }
 
 // EXIT
@@ -239,7 +239,7 @@ CommandResponse
     if (argc != 2)
         return create_response(NULL, RESP_INVALID_ARGS, "argc num error");
     clear(table);
-    return create_response("ok", RESP_OK, "OK\n");
+    return create_response(NULL, RESP_OK, "OK\n");
 }
 
 
