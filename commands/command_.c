@@ -259,7 +259,7 @@ Command *match(const char *name) {
 
         case 'E':
         case 'e': {
-            if (name[1] == 'X' || name[1] == 'x')
+            if ((name[1] == 'X' || name[1] == 'x') && (name[2] == 'I' || name[2] == 'i'))
                 return &commands[4]; // EXIT
             return &commands[3]; // EXPIRE
         }

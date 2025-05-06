@@ -114,7 +114,6 @@ void
                     ssize_t t = read(current_fd, buffer, 4096);
                     if (t > 0) {
                         NetEvent *event = calloc(1, sizeof(NetEvent) + t * sizeof(char));
-                        // event->size = (int) t - 1;
                         event->size = (int) t;
                         event->fd = current_fd;
                         event->type = 1;

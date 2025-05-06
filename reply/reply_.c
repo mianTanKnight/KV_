@@ -26,13 +26,32 @@ void
         //reply
         while (head_) {
             CommandResponse *next = head_->next;
+
+            const char *response_data;
+            size_t response_length;
+
+            // 确定响应数据和长度
             if (strcmp("OK\n", head_->msg) == 0) {
-                // 暂时的实现
-                write(head_->fd, head_->data == NULL ? "empty" : head_->data,
-                      head_->data == NULL ? 6 : strlen(head_->data));
+                if (head_->data == NULL) {
+                    response_data = "null";
+                    response_length = 4; // "empty"长度
+                } else {
+                    response_data = head_->data;
+                    response_length = strlen(head_->data);
+                }
             } else {
-                write(head_->fd, head_->msg, strlen(head_->msg));
+                response_data = head_->msg;
+                response_length = strlen(head_->msg);
             }
+            // 发送长度前缀（4字节网络字节序）
+            uint32_t network_length = htonl((uint32_t)response_length);
+            if (write(head_->fd, &network_length, sizeof(network_length)) != sizeof(network_length)) {
+                LOG_ERROR("Failed to write length prefix: %s", strerror(errno));
+            }
+            if (write(head_->fd, response_data, response_length) != response_length) {
+                LOG_ERROR("Failed to write response data: %s", strerror(errno));
+            }
+            // 释放响应并移动到下一个
             free_response(head_);
             head_ = next;
         }

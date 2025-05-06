@@ -11,13 +11,6 @@
 
 #include <fcntl.h>
 
-
-const char* SET = "set";
-const char* GET = "get";
-const char* DEL = "del";
-const char* EXPIRE = "expire";
-
-
 /**
  *  64------1
  *  bit1: 0长链接模式, 1短链接模式
@@ -78,3 +71,8 @@ int kv_get(KVClient *client, char *key, size_t key_len);
 int kv_del(KVClient *client, char *key, size_t key_len);
 
 int kv_expire(KVClient *client, char *key, size_t key_len, char *value, size_t value_len);
+
+/**
+ * send 是具体的通信, 它是阻塞式
+ */
+int kv_send(KVClient *client);

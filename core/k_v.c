@@ -336,7 +336,7 @@ void
 expire(HashTable *table, const char *key, unsigned int expire) {
     Node *exists = getNode(table, key);
     if (exists)
-        exists->mate_data->expire_time->tv_sec = exists->mate_data->create_time->tv_sec + (expire / 1000);
+        exists->mate_data->expire_time->tv_sec = exists->mate_data->create_time->tv_sec + expire;
 }
 
 
