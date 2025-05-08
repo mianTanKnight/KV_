@@ -283,7 +283,7 @@ def main():
     parser = argparse.ArgumentParser(description='键值存储服务器压力测试工具')
     parser.add_argument('--host', default='localhost', help='服务器主机名')
     parser.add_argument('--port', type=int, default=7000, help='服务器端口')
-    parser.add_argument('--threads', type=int, default=4, help='线程数')
+    parser.add_argument('--threads', type=int, default=3, help='线程数')
     parser.add_argument('--ops', type=int, default=100000, help='总操作数')
     parser.add_argument('--batch', type=int, default=1000, help='进度报告批次大小')
     parser.add_argument('--value-size', type=int, default=100, help='值大小(字节)')

@@ -79,7 +79,7 @@ int process_events(NetServerContext *context) {
                     goto next_;
                 }
                 char *buffer = NULL;
-                unsigned argc = tokenize_command_zero_copy_(event, eventOffset, len, str_len, argv, 10, &buffer);
+                unsigned argc = tokenize_command_line_(event, eventOffset, len, str_len, argv, 10, &buffer);
                 if (!argv[0]) {
                     fprintf(stderr, "Error while processing events of parser tokenize_command_zero_copy_  %s\n ",
                             strerror(errno));

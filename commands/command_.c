@@ -34,6 +34,59 @@ isNumeric(const char *str) {
     return num;
 }
 
+unsigned
+tokenize_command_line_(NetEvent *event,
+                       size_t event_offset,
+                       size_t data_len,
+                       size_t len_str_l,
+                       char **argv,
+                       int max_args,
+                       char **buffer_out) {
+    // event 是链表(head), event1.data -> event2.data -> event3.data 是线性的 这很重要!
+    // 那么我们可以不需要考虑event与event边界的问题 而是直接把它们一次copy到一个足够数组 让其成为真正的线性(数组连续)
+    // 这样我们可以省略while与大量的if(分支预测)
+    int events_len_total_size = 0;
+    NetEvent *current = event;
+    while (current) {
+        events_len_total_size += current->size;
+        current = current->next;
+    }
+    char *lienbuffer = calloc(1,events_len_total_size);
+    if (!lienbuffer) {
+        LOG_ERROR("malloc fail %s", strerror(errno));
+        return -1;
+    }
+    // memset(lienbuffer, 0, events_len_total_size);
+    *buffer_out = lienbuffer;
+
+    current = event;
+    size_t bufferoffset = 0;
+    while (current) {
+        memcpy(lienbuffer + bufferoffset, current->data, current->size);
+        bufferoffset += current->size;
+        current = current->next;
+    }
+    int argn = 0;
+    char *valid_data_start = lienbuffer + event_offset + len_str_l + 1;
+    size_t valid_date_len = data_len - len_str_l - 1; //  like -> 5:hello  data_len = 7 ,len_str_l = 1
+
+    char prev = ' ';
+    while (valid_date_len && argn < max_args) {
+        if (prev == ' ' && *valid_data_start != ' ') {
+            if (argn) {
+                *(valid_data_start - 1) = '\0';
+            }
+            argv[argn++] = valid_data_start;
+        }
+        prev = *valid_data_start;
+        valid_data_start++;
+        valid_date_len--;
+    }
+
+    return argn;
+}
+
+
 unsigned tokenize_command_zero_copy_(NetEvent *event, size_t event_offset, size_t len, size_t len_str_l,
                                      char **argv, int max_args, char **buffer_out) {
     if (!event || !argv || max_args <= 0 || !buffer_out)
@@ -114,7 +167,6 @@ unsigned tokenize_command_zero_copy_(NetEvent *event, size_t event_offset, size_
 
     return arg_count;
 }
-
 
 
 unsigned
